@@ -3,48 +3,60 @@ name: Update Oracle Node
 on:
   push:
     paths:
-      - 'best.txt' # 當 best.txt 發生變動時觸發
-  workflow_dispatch: # 新增：允許手動點擊按鈕觸發測試
+      - 'bestip.txt' # 当你只修改 IP 文件时触发
+  workflow_dispatch: # 保留手动触发，方便你随时测试
 
 jobs:
-  update-list:
+  build-and-update:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 賦予 Action 寫入倉庫的權限
+      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Update oracle.txt
+      - name: Construct Node and Update Files
         run: |
-          # 1. 檢查文件是否存在
-          if [ ! -f "best.txt" ] || [ ! -f "oracle.txt" ]; then
-            echo "文件缺失，跳過執行"
-            exit 0
+          # 1. 检查 IP 文件是否存在且不为空
+          if [ ! -s "bestip.txt" ]; then
+            echo "错误：bestip.txt 是空的或不存在"
+            exit 1
           fi
 
-          # 2. 刪除 oracle.txt 的最後一行 (sed -i '$d' 是精準刪除最後一行的指令)
-          sed -i '$d' oracle.txt
+          # 2. 读取 IP 并去掉可能存在的换行或空格
+          IP=$(cat bestip.txt | xargs)
+          
+          # 3. 定义前缀和后缀
+          PREFIX="vless://226279dd-28b2-4b61-96be-a2a0b1afd522@"
+          SUFFIX=":2096?type=grpc&encryption=none&serviceName=&authority=&security=tls&fp=chrome&alpn=h2&sni=qingyuan.city#%E7%94%B2%E9%AA%A8%E6%96%87%EF%BD%9C%E5%8F%AF%E5%8F%AF%E4%B8%93%E5%B1%9E%E4%BC%98%E9%80%89"
+          
+          # 4. 拼装成完整的节点
+          FULL_NODE="${PREFIX}${IP}${SUFFIX}"
+          echo "新节点已生成"
 
-          # 3. 將 best.txt 的內容追加到 oracle.txt
-          # 使用 echo 確保追加前換行，避免節點文字擠在一起
-          echo "" >> oracle.txt
-          cat best.txt >> oracle.txt
+          # 5. 更新 best.txt (直接覆盖，只存最新的这一行)
+          echo "$FULL_NODE" > best.txt
 
-          # 4. 清理多餘的空行，保持文件整潔
-          sed -i '/^$/d' oracle.txt
+          # 6. 更新 oracle.txt (替换最后一行)
+          if [ -f "oracle.txt" ]; then
+            # 先删除最后一行，再追加新节点
+            sed -i '$d' oracle.txt
+            echo "$FULL_NODE" >> oracle.txt
+          else
+            # 如果文件不存在，则直接创建并写入
+            echo "$FULL_NODE" > oracle.txt
+          fi
 
       - name: Commit and Push
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add oracle.txt
+          git add best.txt oracle.txt
           
-          # 檢查是否有實際內容變化，避免空提交
           if git diff --staged --quiet; then
-            echo "內容無變化，無需提交"
+            echo "内容无变化，跳过提交"
           else
-            git commit -m "手動/自動更新節點: $(date +'%Y-%m-%d %H:%M:%S')"
+            git commit -m "🚀 懒人模式：通过 bestip.txt 自动拼装节点"
             git push
           fi
