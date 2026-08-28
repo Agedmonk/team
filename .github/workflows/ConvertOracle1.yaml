@@ -1,0 +1,177 @@
+name: 自动转换甲骨文路由节点代码
+
+on:
+  push:
+    paths:
+      - 'oracle.txt'
+  workflow_dispatch:
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Convert VLESS to Clash Meta YAML
+        run: |
+          python - << 'EOF'
+          import urllib.parse
+          import yaml
+          import os
+
+          def parse_vless(line):
+              line = line.strip()
+              if not line.startswith("vless://"):
+                  return None
+              
+              # 解析 URL 与 Hash 别名
+              url_part, _, remark = line[8:].partition("#")
+              remark = urllib.parse.unquote(remark) if remark else "VLESS-Node"
+              
+              user_info, _, server_part = url_part.partition("@")
+              uuid = user_info
+              
+              host_port, _, query_str = server_part.partition("?")
+              if ":" in host_port:
+                  server, port = host_port.split(":", 1)
+                  port = int(port)
+              else:
+                  server = host_port
+                  port = 443
+              
+              query = urllib.parse.parse_qs(query_str)
+              def get_param(k):
+                  return query.get(k, [None])[0]
+
+              node = {
+                  "name": remark,
+                  "type": "vless",
+                  "server": server,
+                  "port": port,
+                  "uuid": uuid,
+                  "cipher": "auto",
+                  "udp": True
+              }
+
+              flow = get_param("flow")
+              if flow:
+                  node["flow"] = flow
+
+              security = get_param("security")
+              if security in ["tls", "reality"]:
+                  node["tls"] = True
+                  
+                  sni = get_param("sni")
+                  if sni:
+                      node["servername"] = sni
+
+                  fp = get_param("fp")
+                  if fp:
+                      node["client-fingerprint"] = fp
+
+                  if security == "reality":
+                      reality_opts = {}
+                      pbk = get_param("pbk")
+                      if pbk:
+                          reality_opts["public-key"] = pbk
+                      sid = get_param("sid")
+                      if sid:
+                          reality_opts["short-id"] = sid
+                      if reality_opts:
+                          node["reality-opts"] = reality_opts
+
+              net_type = get_param("type")
+              if net_type == "ws":
+                  node["network"] = "ws"
+                  ws_opts = {}
+                  path = get_param("path")
+                  if path:
+                      ws_opts["path"] = urllib.parse.unquote(path)
+                  host = get_param("host")
+                  if host:
+                      ws_opts["headers"] = {"Host": host}
+                  if ws_opts:
+                      node["ws-opts"] = ws_opts
+              elif net_type == "grpc":
+                  node["network"] = "grpc"
+                  service_name = get_param("serviceName")
+                  if service_name:
+                      node["grpc-opts"] = {"grpc-service-name": service_name}
+
+              return node
+
+          if not os.path.exists("oracle.txt"):
+              print("oracle.txt not found!")
+              exit(0)
+
+          with open("oracle.txt", "r", encoding="utf-8") as f:
+              lines = f.readlines()
+
+          proxies = []
+          names = set()
+          for idx, line in enumerate(lines):
+              node = parse_vless(line)
+              if node:
+                  # 防止节点名称重名冲突
+                  base_name = node["name"]
+                  count = 1
+                  while node["name"] in names:
+                      node["name"] = f"{base_name}-{count}"
+                      count += 1
+                  names.add(node["name"])
+                  proxies.append(node)
+
+          if not proxies:
+              print("No valid VLESS proxies found.")
+              exit(0)
+
+          proxy_names = [p["name"] for p in proxies]
+
+          config = {
+              "port": 7890,
+              "socks-port": 7891,
+              "allow-lan": False,
+              "mode": "rule",
+              "log-level": "info",
+              "proxies": proxies,
+              "proxy-groups": [
+                  {
+                      "name": "PROXY",
+                      "type": "select",
+                      "proxies": ["AUTO"] + proxy_names
+                  },
+                  {
+                      "name": "AUTO",
+                      "type": "url-test",
+                      "url": "http://www.gstatic.com/generate_204",
+                      "interval": 300,
+                      "proxies": proxy_names
+                  }
+              ],
+              "rules": [
+                  "MATCH,PROXY"
+              ]
+          }
+
+          with open("oracle-sub.txt", "w", encoding="utf-8") as f:
+              yaml.dump(config, f, allow_unicode=True, sort_keys=False)
+          print("Successfully generated oracle-sub.txt")
+          EOF
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add oracle-sub.txt
+          git diff --staged --quiet || (git commit -m "自动转换甲骨文路由节点代码" && git push)
