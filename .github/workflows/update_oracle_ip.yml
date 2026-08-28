@@ -1,0 +1,96 @@
+name: 更新甲骨文节点套用的优选IP
+
+on:
+  push:
+    paths:
+      - 'best-cmcc.txt'
+      - 'best-ctc.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-ips:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Update IP in Oracle files
+        run: |
+          python3 - << 'EOF'
+          import re
+          import os
+          import urllib.parse
+
+          # 读取新的移动和电信 IP
+          cmcc_ip = ""
+          ctc_ip = ""
+
+          if os.path.exists('best-cmcc.txt'):
+              with open('best-cmcc.txt', 'r', encoding='utf-8') as f:
+                  cmcc_ip = f.read().strip()
+
+          if os.path.exists('best-ctc.txt'):
+              with open('best-ctc.txt', 'r', encoding='utf-8') as f:
+                  ctc_ip = f.read().strip()
+
+          def update_file(filename):
+              if not os.path.exists(filename):
+                  print(f"File {filename} not found, skipping.")
+                  return
+
+              with open(filename, 'r', encoding='utf-8') as f:
+                  content = f.read()
+
+              # 使用正则匹配每个 vless:// 节点
+              # 匹配规则：vless://[UUID]@[HOST_OR_IP]:[PORT]?[PARAMS]#[REMARK]
+              pattern = re.compile(r'(vless://[^@]+@)([^:]+)(:\d+\?[^#]*#)(.+?)(?=(?:vless://|\n|$))', re.DOTALL)
+
+              def replace_node(match):
+                  prefix = match.group(1)      # vless://UUID@
+                  current_host = match.group(2)# IP / Host
+                  middle = match.group(3)      # :port?params#
+                  remark_raw = match.group(4)  # URL编码或未编码的备注
+
+                  # 解码备注用于判断类型（如 %E7%A7%BB%E5%8A%A8 -> 移动）
+                  remark = urllib.parse.unquote(remark_raw)
+
+                  new_host = current_host
+                  if cmcc_ip and "移动" in remark:
+                      new_host = cmcc_ip
+                  elif ctc_ip and "电信" in remark:
+                      new_host = ctc_ip
+
+                  return f"{prefix}{new_host}{middle}{remark_raw}"
+
+              updated_content = pattern.sub(replace_node, content)
+
+              with open(filename, 'w', encoding='utf-8') as f:
+                  f.write(updated_content)
+              print(f"Updated {filename}")
+
+          update_file('oracle.txt')
+          update_file('oracle2.txt')
+          EOF
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add oracle.txt oracle2.txt
+          
+          # 检查是否有文件改动，有改动则提交推送
+          if git diff --staged --quiet; then
+            echo "No changes detected in oracle.txt and oracle2.txt."
+          else
+            git commit -m "chore: 甲骨文节点已套用最新优选IP"
+            git push
+          fi
