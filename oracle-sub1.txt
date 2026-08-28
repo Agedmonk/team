@@ -1,0 +1,199 @@
+port: 7890
+socks-port: 7891
+allow-lan: false
+mode: rule
+log-level: info
+proxies:
+- name: 甲骨文轻量
+  type: vless
+  server: 64.110.100.50
+  port: 2053
+  uuid: 226279dd-28b2-4b61-96be-a2a0b1afd522
+  cipher: auto
+  udp: true
+  flow: xtls-rprx-vision
+  tls: true
+  servername: www.developer.nvidia.com
+  client-fingerprint: chrome
+  reality-opts:
+    public-key: Uj6mzD2Qjr9PN0nfBCR2-4KyWm-8vddROou39LN6BXM
+    short-id: d7953572
+- name: 甲骨文穿透
+  type: vless
+  server: 64.110.100.50
+  port: 33883
+  uuid: 226279dd-28b2-4b61-96be-a2a0b1afd522
+  cipher: auto
+  udp: true
+  tls: true
+  servername: support-shield.nvidia.dk
+  client-fingerprint: chrome
+  reality-opts:
+    public-key: DT48ozIpZcXmZP2WFDjsRPn39j6WNra7dXTz7_wOfW8
+    short-id: 1d44
+  network: grpc
+  grpc-opts:
+    grpc-service-name: grpc-server
+- name: 甲骨文加密
+  type: vless
+  server: 64.110.100.50
+  port: 33882
+  uuid: 226279dd-28b2-4b61-96be-a2a0b1afd522
+  cipher: auto
+  udp: true
+  tls: true
+  servername: archive.docs.nvidia.com
+  client-fingerprint: chrome
+  reality-opts:
+    public-key: 5r4YPta0CyQ3usGGb4kIRml7dyiitef2bdE7LLm5iSE
+    short-id: b2659128d4
+- name: 甲骨文移动稳定
+  type: vless
+  server: 104.17.98.5
+  port: 8443
+  uuid: 226279dd-28b2-4b61-96be-a2a0b1afd522
+  cipher: auto
+  udp: true
+  tls: true
+  servername: cdn.qingyuan.city
+  client-fingerprint: chrome
+  network: ws
+  ws-opts:
+    path: /api/v1
+    headers:
+      Host: cdn.qingyuan.city
+- name: 甲骨文移动隧道
+  type: vless
+  server: 104.17.98.5
+  port: 2083
+  uuid: 226279dd-28b2-4b61-96be-a2a0b1afd522
+  cipher: auto
+  udp: true
+  tls: true
+  servername: cdn.qingyuan.city
+  client-fingerprint: chrome
+  network: grpc
+  grpc-opts:
+    grpc-service-name: grpc-server
+- name: 甲骨文移动混淆
+  type: vless
+  server: 104.17.98.5
+  port: 2087
+  uuid: 226279dd-28b2-4b61-96be-a2a0b1afd522
+  cipher: auto
+  udp: true
+  tls: true
+  servername: cdn.qingyuan.city
+  client-fingerprint: chrome
+- name: 甲骨文电信稳定
+  type: vless
+  server: 172.64.229.178
+  port: 8443
+  uuid: 226279dd-28b2-4b61-96be-a2a0b1afd522
+  cipher: auto
+  udp: true
+  tls: true
+  servername: cdn.qingyuan.city
+  client-fingerprint: chrome
+  network: ws
+  ws-opts:
+    path: /api/v1
+    headers:
+      Host: cdn.qingyuan.city
+- name: 甲骨文电信隧道
+  type: vless
+  server: 172.64.229.178
+  port: 2083
+  uuid: 226279dd-28b2-4b61-96be-a2a0b1afd522
+  cipher: auto
+  udp: true
+  tls: true
+  servername: cdn.qingyuan.city
+  client-fingerprint: chrome
+  network: grpc
+  grpc-opts:
+    grpc-service-name: grpc-server
+- name: 甲骨文电信混淆
+  type: vless
+  server: 172.64.229.178
+  port: 2087
+  uuid: 226279dd-28b2-4b61-96be-a2a0b1afd522
+  cipher: auto
+  udp: true
+  tls: true
+  servername: cdn.qingyuan.city
+  client-fingerprint: chrome
+- name: 甲骨文原生稳定
+  type: vless
+  server: cdn.qingyuan.city
+  port: 8443
+  uuid: 226279dd-28b2-4b61-96be-a2a0b1afd522
+  cipher: auto
+  udp: true
+  tls: true
+  servername: cdn.qingyuan.city
+  client-fingerprint: chrome
+  network: ws
+  ws-opts:
+    path: /api/v1
+    headers:
+      Host: cdn.qingyuan.city
+- name: 甲骨文原生隧道
+  type: vless
+  server: cdn.qingyuan.city
+  port: 2083
+  uuid: 226279dd-28b2-4b61-96be-a2a0b1afd522
+  cipher: auto
+  udp: true
+  tls: true
+  servername: cdn.qingyuan.city
+  client-fingerprint: chrome
+  network: grpc
+  grpc-opts:
+    grpc-service-name: grpc-server
+- name: 甲骨文原生混淆
+  type: vless
+  server: cdn.qingyuan.city
+  port: 2087
+  uuid: 226279dd-28b2-4b61-96be-a2a0b1afd522
+  cipher: auto
+  udp: true
+  tls: true
+  servername: cdn.qingyuan.city
+  client-fingerprint: chrome
+proxy-groups:
+- name: PROXY
+  type: select
+  proxies:
+  - AUTO
+  - 甲骨文轻量
+  - 甲骨文穿透
+  - 甲骨文加密
+  - 甲骨文移动稳定
+  - 甲骨文移动隧道
+  - 甲骨文移动混淆
+  - 甲骨文电信稳定
+  - 甲骨文电信隧道
+  - 甲骨文电信混淆
+  - 甲骨文原生稳定
+  - 甲骨文原生隧道
+  - 甲骨文原生混淆
+- name: AUTO
+  type: url-test
+  url: http://www.gstatic.com/generate_204
+  interval: 300
+  proxies:
+  - 甲骨文轻量
+  - 甲骨文穿透
+  - 甲骨文加密
+  - 甲骨文移动稳定
+  - 甲骨文移动隧道
+  - 甲骨文移动混淆
+  - 甲骨文电信稳定
+  - 甲骨文电信隧道
+  - 甲骨文电信混淆
+  - 甲骨文原生稳定
+  - 甲骨文原生隧道
+  - 甲骨文原生混淆
+rules:
+- MATCH,PROXY
