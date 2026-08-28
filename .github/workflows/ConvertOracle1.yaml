@@ -164,9 +164,9 @@ jobs:
               ]
           }
 
-          with open("oracle-sub.txt", "w", encoding="utf-8") as f:
+          with open("oracle-sub1.txt", "w", encoding="utf-8") as f:
               yaml.dump(config, f, allow_unicode=True, sort_keys=False)
-          print("Successfully generated oracle-sub.txt")
+          print("Successfully generated oracle-sub1.txt")
           EOF
 
       - name: Commit and push changes
