@@ -173,5 +173,5 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add oracle-sub.txt
+          git add oracle-sub1.txt
           git diff --staged --quiet || (git commit -m "自动转换甲骨文路由节点代码" && git push)
